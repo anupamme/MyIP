@@ -28,7 +28,7 @@ export const SPONSORS = {
       },
       zh: {
         title: '高性能 VPS，更优质的网络',
-        note: '高性能 KVM VPS，覆盖全球多个地区，提供高速网络连接，并支持 IPv4 与 IPv6。',
+        note: '高性能 KVM VPS，覆盖全球多个地区。日本与新加坡线路更有三网优化，提供极高速网络连接。支持 IPv4 与 IPv6。',
         cta: '访问 V.PS',
       },
     },
