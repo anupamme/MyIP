@@ -22,6 +22,11 @@
           :asnConnectivityInfos="asnConnectivityInfos" @refresh-card="refreshCard" />
       </div>
     </div>
+
+    <!-- Sponsored placement — appears once the visible cards have settled, so
+         it never shifts the grid while IPs are still landing. -->
+    <InfoBanner :show="showSponsor" :icon="Server" :title="sponsorText.title" :note="sponsorText.note"
+      :cta="sponsorText.cta" @action="openSponsor" />
   </section>
 </template>
 
@@ -36,7 +41,10 @@ import { transformDataFromIPapi } from '@/utils/transform-ip-data.js';
 import { getIPFromIPIP, getIPFromCloudflare_V4, getIPFromCloudflare_V6, getIPFromIPChecking64, getIPFromIPChecking4, getIPFromIPChecking6 } from '@/utils/getips';
 import { emitAppEvent } from '@/utils/app-events';
 import { authenticatedFetch, fetchErrorLabel } from '@/utils/authenticated-fetch';
+import { SPONSORS, sponsorCopy, sponsorLink } from '@/data/sponsors.js';
+import { Server } from '@lucide/vue';
 import IPCard from './ip-infos/IPCard.vue';
+import InfoBanner from './widgets/InfoBanner.vue';
 
 
 const { t } = useI18n();
@@ -122,6 +130,20 @@ const IPArray = ref([]);
 const ipGeoSource = ref(userPreferences.value.ipGeoSource);
 const usingSource = ref(userPreferences.value.ipGeoSource);
 const fetchStatus = reactive([]);
+
+// Sponsored banner below the cards. Sticky once the cards have settled, and —
+// like the other IPCheck.ing-only surfaces — off on self-hosted deployments.
+const sponsor = SPONSORS.vps;
+const sponsorText = computed(() => sponsorCopy(sponsor, lang.value));
+const cardsHaveSettled = ref(false);
+const showSponsor = computed(() =>
+  cardsHaveSettled.value && configs.value?.originalSite === true
+);
+
+const openSponsor = () => {
+  trackEvent('Section', 'SponsorClick', 'IPInfoVPS');
+  window.open(sponsorLink(sponsor, lang.value), '_blank', 'noopener');
+};
 
 // Middleware
 let pendingIPDetailsRequests = new Map();
@@ -225,6 +247,7 @@ const trackFetchStatus = (status) => {
   }
   if (allHasFetched) {
     store.setLoadingStatus('IPInfo', true);
+    cardsHaveSettled.value = true;
     // Domain event: full snapshot of the visible cards, re-emitted whenever a
     // card settles after this point (single-card refresh included). The report
     // collector normalizes it (drops cards whose ip slot holds an error label).
