@@ -25,7 +25,7 @@
 
     <!-- Sponsored placement — appears once the visible cards have settled, so
          it never shifts the grid while IPs are still landing. -->
-    <InfoBanner :show="showSponsor" :icon="Server" :title="sponsorText.title" :note="sponsorText.note"
+    <InfoBanner :show="showSponsor" sweep :icon="Server" :title="sponsorText.title" :note="sponsorText.note"
       :cta="sponsorText.cta" @action="openSponsor" />
   </section>
 </template>
