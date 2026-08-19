@@ -32,7 +32,7 @@
                         <div v-if="!signedIn"
                             class="flex items-start gap-2 p-3 rounded-md border border-info/30 bg-info/10 text-sm text-info">
                             <Info class="size-4 mt-0.5 shrink-0" />
-                            <span>{{ t('personacheck.signInFirst') }}</span>
+                            <span>{{ t('user.SignInToUse') }}</span>
                         </div>
 
                         <!-- Zone 1 — the identity the visitor expects to show -->
@@ -377,6 +377,7 @@ const run = async () => {
         quotaExceeded.value = true;
         return;
     }
+    trackEvent('Section', 'StartClick', 'PersonaCheck');
     runStatus.value = 'running';
     errorKey.value = '';
     quotaExceeded.value = false;
@@ -397,7 +398,6 @@ const run = async () => {
             counts: report.value.counts,
             results: report.value.results,
         });
-        trackEvent('PersonaCheck', 'run', report.value.grade);
     } catch (error) {
         runStatus.value = 'idle';
         // 429 passed through by the backend: monthly quota exhausted —
