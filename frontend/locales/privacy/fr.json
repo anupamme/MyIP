@@ -7,7 +7,7 @@
       "tools": {
         "title": "Comment fonctionnent les outils",
         "paragraphs": [
-          "La plupart de ce que les outils vous affichent — détails de votre IP, empreinte du navigateur, DNS, connectivité et résultats de test de débit — est calculé dans votre navigateur ou interrogé en direct et affiché à vous seul. Nous ne conservons pas ces résultats sur nos serveurs, sauf si vous créez explicitement un lien de rapport partageable (voir la section suivante).",
+          "La plupart de ce que les outils vous affichent — détails de votre IP, empreinte du navigateur, DNS, connectivité et résultats de test de débit — est calculé dans votre navigateur ou interrogé en direct et affiché à vous seul. Nous ne conservons pas ces résultats sur nos serveurs, sauf si vous créez explicitement un lien de rapport partageable.",
           "Pour rechercher la géolocalisation d'une IP, l'IP interrogée est envoyée à des fournisseurs tiers (tels qu'ipinfo.io, ip-api.com et similaires). Ces recherches sont régies par la politique de confidentialité propre à chaque fournisseur."
         ]
       },
@@ -24,6 +24,19 @@
           "Vous pouvez regrouper vos résultats de test dans un rapport de diagnostic et le partager. La création d'un lien de partage est toujours une action explicite — rien n'est envoyé automatiquement. Vous choisissez les tests à inclure et pouvez masquer la fin des adresses IP avant la création du lien.",
           "Lorsque vous créez un lien, les résultats sélectionnés sont stockés sur notre infrastructure serveur (Cloudflare Workers KV) afin que les personnes avec qui vous partagez le lien puissent l'ouvrir. Le rapport est supprimé automatiquement à la fin de la période de conservation choisie (1, 3 ou 7 jours). Les liens utilisent des identifiants aléatoires impossibles à deviner, nous ne tenons aucun répertoire des rapports existants, et toute personne disposant du lien peut consulter le rapport jusqu'à son expiration.",
           "Copier un rapport pour un assistant IA ou le télécharger en JSON se fait entièrement dans votre navigateur et ne stocke rien sur nos serveurs."
+        ]
+      },
+      "personaCheck": {
+        "title": "Vérification de persona approfondie",
+        "paragraphs": [
+          "La Vérification de persona approfondie est le seul outil dont les mesures quittent votre navigateur. Les autres calculent dans votre navigateur ou effectuent une recherche affichée à vous seul ; celui-ci envoie ce qu'il a collecté à notre propre API, qui l'évalue par rapport au pays que vous avez choisi et vous renvoie le rapport noté. Il nécessite une connexion, et chaque exécution consomme une unité de votre quota mensuel. Ni ce que vous envoyez ni le rapport reçu ne sont conservés — sauf si vous choisissez explicitement de regrouper le résultat dans un lien de rapport partageable ; et même alors, seuls la note et le verdict de chaque vérification y figurent, jamais les valeurs qui les sous-tendent.",
+          "Ce qui accompagne une exécution :"
+        ],
+        "bullets": [
+          "Vos réglages de fuseau horaire et de langue, ainsi que la façon dont votre navigateur formate une date et un nombre d'exemple fixes.",
+          "Les systèmes d'écriture couverts par vos polices installées et vos voix de synthèse, ainsi que votre disposition de clavier — les résultats mêmes que le rapport vous montre. Les lire rend votre navigateur légèrement plus identifiable en général, ce qui est inhérent à cette mesure.",
+          "Les résultats déjà présents sur la page pour les tests IP, WebRTC et DNS.",
+          "Uniquement si vous les fournissez : votre position, arrondie à environ un kilomètre avant de quitter votre appareil et utilisée seulement pour en déduire un pays ; et les 6 à 8 premiers chiffres d'une carte de paiement. Ces chiffres identifient la banque émettrice, jamais votre compte, et ne permettent aucun paiement — ils sont vérifiés auprès d'une base tierce d'émetteurs de cartes."
         ]
       },
       "docsAssistant": {
