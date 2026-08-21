@@ -1,14 +1,16 @@
 // use-shortcuts depends on shortcut.js, which calls document.addEventListener at module load time.
 // Here we inject minimal document / window stubs first, then dynamically import the tested module.
 //
-// pulse-beacon.js pulls `@/utils/...` (Vite alias) and gates the `p` shortcut on a
-// build-time env flag — both are awkward in the Node runner. A load hook stubs
-// that module with a mutable `isPulseEnabled` so we can cover both branches.
+// pulse-beacon.js pulls `@/utils/...` (Vite alias) and the `p` shortcut gates
+// on its build-time env flag — both are awkward in the Node runner. A load
+// hook stubs that module with a mutable `hasPulseBackend` so we can cover
+// both branches (the shortcut's other gate, configs.cloudFlare, is plain
+// test input).
 
 import assert from 'node:assert/strict';
 import { describe, it, after } from 'node:test';
 import { registerHooks } from 'node:module';
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, nextTick } from 'vue';
 
 const documentHandlers = {};
 // Per-test override (see "o" shortcut cases below). Default: no card is
@@ -32,10 +34,10 @@ registerHooks({
         format: 'module',
         shortCircuit: true,
         source: `
-          export const PULSE_URL = 'https://pulse.test';
+          export const PULSE_BEACON_URL = 'https://pulse.test';
           export const sendVisitBeacon = () => {};
-          export let isPulseEnabled = false;
-          globalThis.__setPulseEnabledForTest = (v) => { isPulseEnabled = Boolean(v); };
+          export let hasPulseBackend = false;
+          globalThis.__setPulseBackendForTest = (v) => { hasPulseBackend = Boolean(v); };
         `,
       };
     }
@@ -104,24 +106,20 @@ function makeRefs() {
   };
 }
 
-// use fake setTimeout to synchronize loadShortcuts
-const realSetTimeout = globalThis.setTimeout;
-globalThis.setTimeout = (fn) => { fn(); return 0; };
-
 after(() => {
-  globalThis.setTimeout = realSetTimeout;
-  globalThis.__setPulseEnabledForTest?.(false);
+  globalThis.__setPulseBackendForTest?.(false);
 });
 
 function loadAndGetKeyMap({
   originalSite = false,
   ipHistoryEnabled = true,
-  pulseEnabled = false,
+  pulseBackend = false,
+  cloudFlare = false,
 } = {}) {
-  globalThis.__setPulseEnabledForTest(pulseEnabled);
+  globalThis.__setPulseBackendForTest(pulseBackend);
   const store = makeStoreStub();
   const { refs, calls } = makeRefs();
-  const configs = computed(() => ({ originalSite, map: true }));
+  const configs = computed(() => ({ originalSite, map: true, cloudFlare }));
   const userPreferences = computed(() => ({ ipCardsToShow: 2, ipHistoryEnabled }));
 
   const { loadShortcuts } = useShortcuts({
@@ -136,7 +134,7 @@ function loadAndGetKeyMap({
 
 describe('useShortcuts()', () => {
   it('loadShortcuts() registers a keymap of 26+ entries on a non-original site', () => {
-    const { keyMap } = loadAndGetKeyMap({ originalSite: false, pulseEnabled: false });
+    const { keyMap } = loadAndGetKeyMap({ originalSite: false, pulseBackend: false, cloudFlare: false });
     // 26 base entries (no invisibility / enhanced-DNS / pulse).
     const distinctKeys = new Set(keyMap.map((e) => e.keys));
     assert.ok(distinctKeys.size >= 26, `expected ≥26 distinct shortcut keys, got ${distinctKeys.size}`);
@@ -145,7 +143,7 @@ describe('useShortcuts()', () => {
     assert.ok(distinctKeys.has('g'));
     assert.ok(distinctKeys.has('o'));
     assert.ok(distinctKeys.has('H'));
-    assert.equal(distinctKeys.has('p'), false, 'pulse shortcut stays off when isPulseEnabled is false');
+    assert.equal(distinctKeys.has('p'), false, 'pulse shortcut stays off without a pulse backend or cloudFlare key');
     assert.equal(distinctKeys.has('P'), false, 'persona shortcut stays off a self-hosted instance');
     // Overlays take no keys at all (utils/shortcut.js), so there is no
     // drawer-only entry left to register.
@@ -241,12 +239,39 @@ describe('useShortcuts()', () => {
     assert.deepEqual(store.state.toggledSheets, []);
   });
 
-  it('isPulseEnabled adds the pulse shortcut (key "p")', () => {
-    const { keyMap, store } = loadAndGetKeyMap({ pulseEnabled: true });
+  it('the pulse backend flag adds the pulse shortcut (key "p")', () => {
+    const { keyMap, store } = loadAndGetKeyMap({ pulseBackend: true });
     const entry = keyMap.findLast((e) => e.keys === 'p');
-    assert.ok(entry, '"p" key should be present when isPulseEnabled');
+    assert.ok(entry, '"p" key should be present when hasPulseBackend');
     entry.action();
     assert.deepEqual(store.state.toggledSheets, ['pulse']);
+  });
+
+  it('configs.cloudFlare alone adds the pulse shortcut (outage-only fork)', () => {
+    const { keyMap, store } = loadAndGetKeyMap({ pulseBackend: false, cloudFlare: true });
+    const entry = keyMap.findLast((e) => e.keys === 'p');
+    assert.ok(entry, '"p" key should be present when configs.cloudFlare is set');
+    entry.action();
+    assert.deepEqual(store.state.toggledSheets, ['pulse']);
+  });
+
+  it('configs landing after registration re-registers the map (late "p")', async () => {
+    globalThis.__setPulseBackendForTest(false);
+    const store = makeStoreStub();
+    const { refs } = makeRefs();
+    // Reactive configs source so the watcher inside useShortcuts can fire.
+    const configsData = ref({ originalSite: false, map: true });
+    const configs = computed(() => configsData.value);
+    const userPreferences = computed(() => ({ ipCardsToShow: 2, ipHistoryEnabled: true }));
+
+    const { loadShortcuts } = useShortcuts({ refs, store, t, configs, userPreferences });
+    loadShortcuts();
+    const keyMap = refs.helpModalRef.value.keyMap;
+    assert.equal(keyMap.some((e) => e.keys === 'p'), false, 'no "p" before configs resolve');
+
+    configsData.value = { originalSite: false, map: true, cloudFlare: true };
+    await nextTick(); // flush the configs watcher
+    assert.equal(keyMap.some((e) => e.keys === 'p'), true, '"p" appears once cloudFlare lands');
   });
 
   it('"o" opens the highlighted advanced tool by its data-adv-slug', () => {
